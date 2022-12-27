@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "bmpfile.h": "c",
+        "processa_utilities.h": "c",
+        "processb_utilities.h": "c"
+    }
+}

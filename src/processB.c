@@ -1,4 +1,5 @@
 #include "./../include/processB_utilities.h"
+#include <bmpfile.h>
 
 int main(int argc, char const *argv[])
 {
