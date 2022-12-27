@@ -11,7 +11,7 @@ int spawn(const char * program, char * arg_list[]) {
 
   if(child_pid < 0) {
     perror("Error while forking...");
-    return 1;
+    return -1;
   }
 
   else if(child_pid != 0) {
@@ -19,9 +19,8 @@ int spawn(const char * program, char * arg_list[]) {
   }
 
   else {
-    if(execvp (program, arg_list) == 0);
-    perror("Exec failed");
-    return 1;
+    if(execvp (program, arg_list) < 0) perror("Exec failed");
+    return -1;
   }
 }
 

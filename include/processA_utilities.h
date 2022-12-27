@@ -64,6 +64,15 @@ void set_circle() {
     circle.x = COLS / 2;
 }
 
+// Get circle's current position (center):
+int get_circle_x() {
+    return circle.x;
+}
+
+int get_circle_y() {
+    return circle.y;
+}
+
 // Draw filled circle according to its equation
 void draw_circle() {
     attron(COLOR_PAIR(1));
