@@ -55,7 +55,7 @@ int main(int argc, char const *argv[])
     sa_exit.sa_flags = SA_RESTART;
     if (sigaction(SIGTERM, &sa_exit, NULL) < 0)
     {
-        int length = snprintf(log_msg, 64, "Cannot catch SIGTERM.\n");
+        length = snprintf(log_msg, 64, "Cannot catch SIGTERM.\n");
         if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
             perror("Error writing to log (cmd)");
     }

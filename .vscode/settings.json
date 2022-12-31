@@ -3,6 +3,12 @@
         "bmpfile.h": "c",
         "processa_utilities.h": "c",
         "processb_utilities.h": "c",
-        "stat.h": "c"
+        "stat.h": "c",
+        "semaphore.h": "c",
+        "mman.h": "c",
+        "cwchar": "cpp",
+        "type_traits": "cpp",
+        "cmath": "cpp",
+        "limits": "cpp"
     }
 }
