@@ -1,12 +1,9 @@
 # ARP-Assignment2
-Base repository for the **second ARP assignment**.
-The project provides you with a base infrastructure for the implementation of the simulated vision system through shared memory, according to the requirements specified in the PDF file of the assignment.
+Implementation of a simulated vision system through shared memory.
 
 The two processes involved in the simulation of the vision system, namely **processA** and **processB**, are implemented as simple *ncurses windows*. The development of the inter-process communication pipeline, that is the shared memory, is left to you.
 
 As for the first assignment, you also find a **master** process already prepared for you, responsible of spawning the entire simulation.
-
-Additionally, I have prepared a simple program called **circle.c**, which shows you the basic functionalities of the *libbitmap* library. Please, note that the **circle.c** process must not appear in your final project. It is simply meant to be a guide for you on how to use the bitmap library, therefore you will need to properly use portions of that code in **processA** and **processB** in order to develop your solution.
 
 All credits to @SimoneMacci0 for development of the base repository for the assignment, at [SimoneMacci0/ARP-Assignment2](https://github.com/SimoneMacci0/ARP-Assignment2).
 
@@ -28,8 +25,16 @@ Example for compiling **circle.c**: ```gcc src/circle.c -lbmp -lm -o bin/circle`
 ## Compiling and running **processA** and **processB**
 The two processes are implemented as UIs through *ncurses* library, therefore you need to compile their source files by linking the shared library via ```-lncurses```. As for the first assignment, exploit the resize event of the windows to get out of situations in which the graphical elements do not properly spawn.
 
-## Executing **circle.c**
-This is a simple example of a program which uses the *libbitmap* library. It generates a 100x100 colored `.bmp` file with user-defined name, depicting a blue circle of given radius. When you execute it, pass the two arguments (file name and radius value) along. Execution example: ```./bin/circle out/test.bmp 20```.
+We provide a shell script `compile.sh` to compile the application:
+
+```shell
+$ ./compile.sh
+```
+
+To run:
+```shell
+$ ./bin/master
+```
 
 ## A note about the consoles:
 
@@ -37,12 +42,17 @@ The two consoles:
 
 - The first konsole window of process A simulates movement of an object, in our case a blue circle. The object can be moved with the arrow keys. In order to save a snapshot of the particular instance, press the `P` or the **Print** button. In order to terminate both process A and B and respective konsoles, we have implemented an extra `X` or **Stop** button.
 
+![Process A](images/processA.png)
+
+- Snapshot of the object after pressing the `P` button.
+
+![Snapshot](images/snapshot.png)
+
+
 - The second konsole window of process B tracks and shows the position of the object.
 
-
-![Process A](images/processA.png)
 ![Process B](images/processB.png)
-![Snapshot](images/snapshot.png)
+
 
 
 ## Programming Paradigms
@@ -54,11 +64,11 @@ The two consoles:
 
 #### Note:
 
-- Since the `libbitmap` library makes use of dynamic memory to allocate the space needed to represent the `bmpfile_t` data type, a shared memory object for that purpose. 
+- Since the `libbitmap` library makes use of dynamic memory to allocate the space needed to represent the `bmpfile_t` data type, it cannot be used in a shared memory. 
 
--It is done by mapping the area of memory as an `rgb_pixel_t` RGBa structure. A user-defined function `save_bmp()` has been created which takes the `bmpfile_t` image and store (pixel-by-pixel) in an rgb_pixel_t matrix in the shared memory.
+- We map the area of shared memory as an `rgb_pixel_t` BGRa structure. A user-defined function `save_bmp()` has been created which takes the `bmpfile_t` image and store (pixel-by-pixel) in an rgb_pixel_t matrix in the shared memory.
 
-- In the process B, the `RGBa` matrix available and updated continuously in the shared memory is accesses and used directly to compute the centre of the circle, instead of saving a separate copy of bmp file for the same purpose.
+- The `BGRa` matrix, which is available and updated continuously in the shared memory, is accessed and used directly in the process B to compute the centre of the circle, instead of saving a separate copy of bmp file for the same purpose.
 
 
 ## Brief Explanations about the processes
