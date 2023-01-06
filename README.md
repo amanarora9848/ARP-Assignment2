@@ -44,7 +44,7 @@ The two consoles:
 
 ![Process A](images/processA.png)
 
-- Snapshot of the object after pressing the `P` button.
+- Snapshot of the object after pressing the `P` button.  It is saved as `./out/snapshot.bmp`.
 
 ![Snapshot](images/snapshot.png)
 
