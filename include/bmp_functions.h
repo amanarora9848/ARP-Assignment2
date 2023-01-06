@@ -70,17 +70,15 @@ void load_bmp(bmpfile_t *bmp, rgb_pixel_t *matrix) {
 
 void find_circle_center(rgb_pixel_t* matrix, int* pos) {
     int max_len = 0, count = 1; 
-    int circle_found = 0;
-    // Find the center of the circle:
     for(int x = 0; x < WIDTH; x++) {
+        // Length of the current chord:
         int len = 0;
         for(int y = 0; y < HEIGHT; y++) {
             // Get pixel at x,y:
             rgb_pixel_t pixel = matrix[x + y*WIDTH];
-            // First, to calculate the dimeter of the blue circle, store all vertical chords:
+            // If pixel is not white, it is part of the circle:
             if (pixel.blue + pixel.green + pixel.red < 765) {
-                circle_found = 1;
-                // Check if previous pixel was white:
+                // Check if previous pixel was white for the initial position:
                 rgb_pixel_t prev_pixel  = matrix[x + (y-1)*WIDTH];
                 if (prev_pixel.blue == 255 && prev_pixel.green == 255 && prev_pixel.red == 255) {
                     pos[0] = x;
@@ -89,16 +87,19 @@ void find_circle_center(rgb_pixel_t* matrix, int* pos) {
                 len++;
             }
         }
+        // If this chord is bigger than the previous, keep on looking:
         if (len > max_len) {
             max_len = len;
             count = 1;
         }
-        else if (circle_found && len == max_len) count++;
-        else if (circle_found) break;
+        // If chord length is equal than the previous, add to count:
+        else if (len == max_len) count++;
+        // If chord length is less than previous, we break because we already know the center:
+        else break;
     }
-    // Find the maximum length chord in chords:
+    // Compute the center of the circle:
     pos[0] = pos[0] - count / 2 - 1;
     pos[1] = pos[1] + max_len / 2 - 1;
-    // return 2 pointers x0, y0;
-    // return pos;
+    // The "-1" are needed because the last position stored in pos belongs 
+    // to the first chord that is smaller than previous one.
 }
