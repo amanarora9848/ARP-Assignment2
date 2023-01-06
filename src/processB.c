@@ -75,6 +75,19 @@ int main(int argc, char const *argv[])
         exit(1);
     }
 
+    // Open semaphore:
+    char sem_name[] = "/bmp_sem";
+    sem_t *sem_id = sem_open(sem_name, 1);
+    if (sem_id == SEM_FAILED)
+    {
+        length = snprintf(log_msg, 64, "Error opening semaphore: %d.\n", errno);
+        if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
+            perror("Error writing to log (B)");
+        close(shm_fd);
+        shm_unlink(shm_name);
+        exit(1);
+    }
+
     // Map shared memory:
     rgb_pixel_t *ptr = (rgb_pixel_t *)mmap(0, shm_size, PROT_READ, MAP_SHARED, shm_fd, 0);
     if (ptr == MAP_FAILED)
@@ -86,19 +99,6 @@ int main(int argc, char const *argv[])
         shm_unlink(shm_name);
         sem_close(sem_id);
         sem_unlink(sem_name);
-        exit(1);
-    }
-    
-    // Open semaphore:
-    char sem_name[] = "/bmp_sem";
-    sem_t *sem_id = sem_open(sem_name, 1);
-    if (sem_id == SEM_FAILED)
-    {
-        length = snprintf(log_msg, 64, "Error opening semaphore: %d.\n", errno);
-        if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
-            perror("Error writing to log (B)");
-        close(shm_fd);
-        shm_unlink(shm_name);
         exit(1);
     }
 
