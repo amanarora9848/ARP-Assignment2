@@ -13,9 +13,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-// #define SHM_NAME "/bmp_memory"
-// #define SEM_NAME "/bmp_sem"
-
 int finish = 0;
 
 int write_log(int fd_log, char *msg, int lmsg)
@@ -42,10 +39,7 @@ int main(int argc, char const *argv[])
     int fd_log = creat("./logs/processB.txt", 0666);
     if (fd_log < 0) {
         perror("Error opening log file (B)");
-        sleep(5);
-        exit(1);
     }
-        
     char log_msg[64];
     int length;
 
@@ -67,12 +61,10 @@ int main(int argc, char const *argv[])
 
     // Initialize UI
     init_console_ui();
-
-    // Drawing initial state:
-    // bmpfile_t *bmp;
+    
     const size_t shm_size = WIDTH * HEIGHT * sizeof(rgb_pixel_t);
 
-    // Open shared memory
+    // Open shared memory:
     char shm_name[] = "/bmp_memory";
     int shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
     if (shm_fd < 0 && errno != EINTR)
@@ -83,28 +75,7 @@ int main(int argc, char const *argv[])
         exit(1);
     }
 
-    // open semaphore
-    char sem_name[] = "/bmp_sem";
-    sem_t *sem_id = sem_open(sem_name, 1);
-    if (sem_id == SEM_FAILED)
-    {
-        length = snprintf(log_msg, 64, "Error opening semaphore: %d.\n", errno);
-        if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
-            perror("Error writing to log (B)");
-        close(shm_fd);
-        shm_unlink(shm_name);
-        exit(1);
-    }
-
-    // Initialize semaphore: (Debug)
-    if (sem_init(sem_id, 1, 0) < 0)
-    {
-        perror("Error initializing semaphore");
-        sem_close(sem_id);
-        sem_unlink(sem_name);
-    }
-
-    // Map shared memory
+    // Map shared memory:
     rgb_pixel_t *ptr = (rgb_pixel_t *)mmap(0, shm_size, PROT_READ, MAP_SHARED, shm_fd, 0);
     if (ptr == MAP_FAILED)
     {
@@ -117,9 +88,23 @@ int main(int argc, char const *argv[])
         sem_unlink(sem_name);
         exit(1);
     }
+    
+    // Open semaphore:
+    char sem_name[] = "/bmp_sem";
+    sem_t *sem_id = sem_open(sem_name, 1);
+    if (sem_id == SEM_FAILED)
+    {
+        length = snprintf(log_msg, 64, "Error opening semaphore: %d.\n", errno);
+        if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
+            perror("Error writing to log (B)");
+        close(shm_fd);
+        shm_unlink(shm_name);
+        exit(1);
+    }
 
     int center_pos[2];
-    // Lock semaphore
+    
+    // Wait for semaphore:
     if (sem_wait(sem_id) < 0 && errno != EINTR)
     {
         length = snprintf(log_msg, 64, "Error waiting semaphore: %d.\n", errno);
@@ -127,13 +112,14 @@ int main(int argc, char const *argv[])
             perror("Error writing to log (B)");
         finish = 1;
     }
-
+    
+    // Get center of the circle:
     find_circle_center(ptr, center_pos);
     length = snprintf(log_msg, 64, "Center of circle found at (%d, %d).\n", center_pos[0], center_pos[1]);
     if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
         perror("Error writing to log (B)");
 
-    // Draw circle center
+    // Draw circle center:
     mvaddch(center_pos[1] / SCALE, center_pos[0] / SCALE, '0');
 
     // Infinite loop
@@ -158,7 +144,7 @@ int main(int argc, char const *argv[])
 
         else
         {
-            // Lock semaphore
+            // Wait for semaphore:
             if (sem_wait(sem_id) < 0 && errno != EINTR)
             {
                 length = snprintf(log_msg, 64, "Error waiting semaphore: %d.\n", errno);
@@ -167,7 +153,7 @@ int main(int argc, char const *argv[])
                 finish = 1;
             }
 
-
+            // Get center of the circle:
             find_circle_center(ptr, center_pos);
             length = snprintf(log_msg, 64, "Center of circle found at (%d, %d).\n", center_pos[0], center_pos[1]);
             if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
@@ -187,7 +173,6 @@ int main(int argc, char const *argv[])
     close(shm_fd);
     shm_unlink(shm_name);
     sem_close(sem_id);
-    sem_unlink(sem_name);
     close(fd_log);
     endwin();
     return 0;
