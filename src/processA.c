@@ -31,7 +31,10 @@ int write_log(int fd_log, char *msg, int lmsg)
 
 int main(int argc, char *argv[])
 {
+    // Some time for process B to initialize:
     sleep(1);
+    
+    // Get the PID of process B:
     FILE *cmd = popen("pgrep processB", "r");
     char result[10];
     fgets(result, sizeof(result), cmd);
@@ -45,10 +48,12 @@ int main(int argc, char *argv[])
     char log_msg[64];
     int length;
 
-    length = snprintf(log_msg, 64, "PID process B: %d.\n", pid_b);
-    if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
-        perror("Error writing to log (A)");
+    // Write processB PID to log:
+    // length = snprintf(log_msg, 64, "PID process B: %d.\n", pid_b);
+    // if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
+    //     perror("Error writing to log (A)");
 
+    // Time structure for the sleep:
     const struct timespec delay_nano = {
         .tv_sec = 0,
         .tv_nsec = DT * 1e6}; // 25ms
@@ -59,11 +64,11 @@ int main(int argc, char *argv[])
     // Initialize UI
     init_console_ui();
 
-    // Declare circle center variables
+    // Declare circle center variables:
     int circle_x;
     int circle_y;
 
-    // Draw initial state:
+    // Create bitmap structure:
     bmpfile_t *bmp;
     const size_t shm_size = WIDTH * HEIGHT * sizeof(rgb_pixel_t);
     bmp = bmp_create(WIDTH, HEIGHT, 4);
@@ -74,6 +79,8 @@ int main(int argc, char *argv[])
             perror("Error writing to log (A)");
         exit(1);
     }
+    
+    // Draw initial state:
     circle_x = get_circle_x() * SCALE;
     circle_y = get_circle_y() * SCALE;
     draw_bmp(bmp, circle_x, circle_y);
@@ -130,7 +137,6 @@ int main(int argc, char *argv[])
         close(shm_fd);
         shm_unlink(shm_name);
         sem_close(sem_id);
-        sem_unlink(sem_name);
         exit(1);
     }
 
@@ -147,7 +153,6 @@ int main(int argc, char *argv[])
         close(shm_fd);
         shm_unlink(shm_name);
         sem_close(sem_id);
-        sem_unlink(sem_name);
         exit(1);
     }
 
@@ -170,11 +175,12 @@ int main(int argc, char *argv[])
             }
         }
 
-        // Else, if user presses print button...
+        // Else, if user presses button...
         else if (cmd == KEY_MOUSE)
         {
             if (getmouse(&event) == OK)
             {
+                // Pressed print button:
                 if (check_button_pressed(print_btn, &event))
                 {
                     // Save snapshot:
@@ -188,6 +194,8 @@ int main(int argc, char *argv[])
                         mvaddch(LINES - 1, j, ' ');
                     }
                 }
+                
+                // Pressed exit button:
                 else if (check_button_pressed(exit_btn, &event))
                 {
                     finish = 1;
@@ -199,10 +207,13 @@ int main(int argc, char *argv[])
         // If input is an arrow key, move circle accordingly...
         else if (cmd == KEY_LEFT || cmd == KEY_RIGHT || cmd == KEY_UP || cmd == KEY_DOWN)
         {
+            // Move and draw circle:
             move_circle(cmd);
             draw_circle();
+            
             // Destroy bitmap:
             bmp_destroy(bmp);
+            
             // Create new bitmap:
             bmp = bmp_create(WIDTH, HEIGHT, 4);
             if (bmp == NULL)
@@ -212,9 +223,10 @@ int main(int argc, char *argv[])
                     perror("Error writing to log (A)");
                 finish = 1;
             }
+            
+            // Draw new bitmap:
             circle_x = get_circle_x() * SCALE;
             circle_y = get_circle_y() * SCALE;
-            // Draw new bitmap:
             draw_bmp(bmp, circle_x, circle_y);
 
             // Log the center
@@ -234,6 +246,7 @@ int main(int argc, char *argv[])
                 finish = 1;
             }
         }
+        
         nanosleep(&delay_nano, NULL);
     }
 
@@ -243,9 +256,7 @@ int main(int argc, char *argv[])
         perror("Error writing to log (A)");
     bmp_destroy(bmp);
     close(shm_fd);
-    // shm_unlink(shm_name);
     sem_close(sem_id);
-    // sem_unlink(sem_name);
     close(fd_log);
     endwin();
     return 0;
