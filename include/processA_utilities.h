@@ -53,7 +53,6 @@ int check_button_pressed(WINDOW *btn, MEVENT *event) {
 
 // Method to draw lateral elements of the UI (button)
 void draw_side_ui() {
-
     mvvline(0, COLS - BTN_SIZE_X - 1, ACS_VLINE, LINES);
     draw_btn(print_btn, 'P', 2);
     draw_btn(exit_btn, 'X', 3);

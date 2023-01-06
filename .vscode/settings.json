@@ -9,6 +9,8 @@
         "cwchar": "cpp",
         "type_traits": "cpp",
         "cmath": "cpp",
-        "limits": "cpp"
+        "limits": "cpp",
+        "bmp_functions.h": "c",
+        "errno.h": "c"
     }
 }

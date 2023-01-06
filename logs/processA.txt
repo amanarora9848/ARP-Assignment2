@@ -1,0 +1,1 @@
+[16:41:20]: Center of circle drawn at (800, 240).[16:41:29]: Exited successfully.

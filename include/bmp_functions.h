@@ -67,3 +67,35 @@ void load_bmp(bmpfile_t *bmp, rgb_pixel_t *matrix) {
         }
     }
 }
+
+void find_circle_center(rgb_pixel_t* matrix, int* pos) {
+    int max_len = 0, count = 0; 
+    int circle_found = 0;
+    // Find the center of the circle:
+    for(int x = 0; x < WIDTH; x++) {
+        int len = 0;
+        for(int y = 0; y < HEIGHT; y++) {
+            // Get pixel at x,y:
+            rgb_pixel_t pixel = matrix[x + y*WIDTH];
+            // First, to calculate the dimeter of the blue circle, store all vertical chords:
+            if (pixel.blue == 255 && pixel.green == 0 && pixel.red == 0) {
+                circle_found = 1;
+                // Check if previous pixel was white:
+                rgb_pixel_t prev_pixel  = matrix[x + (y-1)*WIDTH];
+                if (prev_pixel.blue == 255 && prev_pixel.green == 255 && prev_pixel.red == 255) {
+                    pos[0] = x;
+                    pos[1] = y;
+                }
+                len++;
+            }
+        }
+        if (len > max_len) max_len = len;
+        else if (circle_found && len == max_len) count++;
+        else if (circle_found) break;
+    }
+    // Find the maximum length chord in chords:
+    pos[0] = pos[0] - count / 2 - 1;
+    pos[1] = pos[1] + max_len / 2 - 1;
+    // return 2 pointers x0, y0;
+    // return pos;
+}
