@@ -33,58 +33,53 @@ This is a simple example of a program which uses the *libbitmap* library. It gen
 
 ## A note about the consoles:
 
-The two consoles: Inspection and Command console will be controlling the movement of the hoist, as instructed. All the process logs, user inputs, etc., are written to the log files inside `logs/`. 
+The two consoles: 
 
-Apart from the already present **Stop** `S` and **Reset** `R` buttons, we have implemented an extra **exit** button `X`, which can be used to terminate all the processes and close the consoles.
+- The first konsole window of process A simulates movement of an object, in our case a blue circle. The object can be moved with the arrow keys. In order to save a snapshot of the particular instance, press the `P` or the **Print** button. In order to terminate both process A and B and respective konsoles, we have implemented an extra `X` or **Stop** button.
 
-![Command Console](images/command_console.png)
-![Inspection Console](images/inspection_console.png)
+- The second konsole window of process B tracks and shows the position of the object.
 
-## Branch Info:
 
-- **main**: In this version, the `master` process also performs `watchdog` duties. Watchdog uses the log files information (mtime) to keep track of the inactivity of the processes
-- **exp**: Experimental branch, where changes are made before merging to other branches. Right now it should be the same as **version2**.
-- **version2**: In this version, `master` only spawns the processes and the watchdog is a separate process. The watchdog receives periodically "alive" messages from other processes and keeps track of their inactivity using the lack of such messages. 
+![Process A](images/processA.png)
+![Process B](images/processB.png)
+![Snapshot](images/snapshot.png)
 
 
 ## Programming Paradigms
 
-- All Inter Process Communications are done using named pipes (FIFOs).
-- Most processes also use the `select` function to monitor `pipes` and read only when data is avaialable in them.
-- We use the `sigaction` POSIX function to perform all signal handling for all the pre-existing and user defined signals.
+- The processes A and B use **Shared memory** to communicate information (update and keep track of the RGB image - with the circle). `mmap()` is used to map the shared memory object of the image size and allows writing (by process A) and reading (by process B)
+- The processes also make use of a **Semaphore** to access the shared memory synchronously and avoid data corruption.
+- We use the `sigaction` POSIX function to perform signal handling for all the pre-existing and user defined signals.
+- All info and error messages are logged in separate log files maintained for each process.
+
+#### Note:
+
+- Since the `libbitmap` library makes use of dynamic memory to allocate the space needed to represent the `bmpfile_t` data type, a shared memory object for that purpose. 
+
+-It is done by mapping the area of memory as an `rgb_pixel_t` RGBa structure. A user-defined function `save_bmp()` has been created which takes the `bmpfile_t` image and store (pixel-by-pixel) in an rgb_pixel_t matrix in the shared memory.
+
+- In the process B, the `RGBa` matrix available and updated continuously in the shared memory is accesses and used directly to compute the centre of the circle, instead of saving a separate copy of bmp file for the same purpose.
 
 
 ## Brief Explanations about the processes
 
 - Master: 
-	- Spawns the `command` console.
-	- Spawns the motor processes `motorx` and `motorz`.
-	- Spawns the `world` process.
-	- Spawns the `inspection` console, which takes the pid's of the motor processes.
-	- Performs `watchdog` duties: keeps track of inactivity time for every process looking at the `mtime` property of all log files.
-	- Waits for the termination of the 'konsoles' and terminates the programs.
+	- The Master process spawns the processes A and B in respective konsoles.
+	- It also opens and initializes the semaphore used by processes A and B to synchronously access the shared memory.
 
-- Command Console:
-	- Sends the user input for controlling motors to both motors, `motorx` and `motorz`.
-	- Logs the status messages (user inputs) and any errors in the log file.
+- Process A
+	- Draws and moves the object (the blue circle).
+	- Creates and maps the shared memory object to share the rbg_pixel_t matrix among the processes for communication.
+	- Uses semaphore while writing the pixel matrix to shared memory. Uses the function `save_bmp` to save the bitmap image in the form of `rgb_pixel_t` matrix in the shared memory.
+	- Checks for keyboard and mouse events, moves the object as per the command given by the keyboard and saves a snapshot or terminates the processes upon pressing the respective buttons as mentioned.
 
-- Inspection Console:
-	- Keeps track of the 3 buttons, `Stop`, `Reset` and `X` (EXIT) buttons.
-	- Sends the coresponding signal to both motors and cmd.
-	- Logs the button pressed (user input) and any errors in the log file.
-
-- MotorX and MotorZ:
-	- Set (or Resets) the desired velocities of the hoist (increasing or decreasing by a set buffer) received from `cmd` pipe.
-	- Send the desired `x` and `z` positions to the world process using fifos.
-	- logs the desired position and any errors in the log file.
-
-- World:
-	- Receives the `x` and `z` position of the hoist (from the motors)
-	- Generates (simulates) a random error within a defined range (5%).
-	- Sends generated positions to the inspection console.
-	- Logs the received position and the generated one, as well as any errors, in the log file.
+- Process B
+	- Reads the pixel matrix from the shared memory object 
+	- Uses semaphore while doing so.
+	- Uses the user defined function `find_circle_center()` to compute the center of the circle.
+	- Displays the center of the circle on an ncurses window synchronously with the movement of the same in process A.
 
 
 ## Known Issues:
 
-- After pressing the exit button (in the inspection console) "broken pipe" errors are produced in `motorx`, `motorz` and `world` which are actually recorded in their corresponding log files. This is most likely caused due to the long time between the termination of the consoles and these other processes, giving them enough time to try to read from closed pipes. This error is not present when processes are terminated due to inactivity for instance. These errors are handled through the handling of the SIGPIPE signal produced.
+- Upon executing the program for the first time, Process B may fail to open one or more of the file descriptors (shared memory, log file, or the semaphore). In that case, simply closing the konsoles and rerunning the program would solve the problem.
