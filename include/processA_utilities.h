@@ -12,8 +12,8 @@ typedef struct {
 
 // Circle variable definition
 CIRCLE circle;
-// Window for print button
-WINDOW *print_btn;
+// Window for buttons
+WINDOW *print_btn, *exit_btn;
 // Mouse event variable
 MEVENT event;
 
@@ -22,7 +22,8 @@ int BTN_SIZE_X = 7;
 
 // Method to instantiate button window
 void make_print_button() {
-    print_btn = newwin(BTN_SIZE_Y, BTN_SIZE_X, (LINES - BTN_SIZE_Y) / 2 , (COLS - BTN_SIZE_X));
+    print_btn = newwin(BTN_SIZE_Y, BTN_SIZE_X, LINES / 2 - 3 * BTN_SIZE_Y / 2 , (COLS - BTN_SIZE_X));
+    exit_btn = newwin(BTN_SIZE_Y, BTN_SIZE_X, LINES / 2 + BTN_SIZE_Y / 2 , (COLS - BTN_SIZE_X));
 }
 
 // Draw button with colored background
@@ -52,9 +53,9 @@ int check_button_pressed(WINDOW *btn, MEVENT *event) {
 
 // Method to draw lateral elements of the UI (button)
 void draw_side_ui() {
-
     mvvline(0, COLS - BTN_SIZE_X - 1, ACS_VLINE, LINES);
     draw_btn(print_btn, 'P', 2);
+    draw_btn(exit_btn, 'X', 3);
     refresh();
 }
 
@@ -62,6 +63,15 @@ void draw_side_ui() {
 void set_circle() {
     circle.y = LINES / 2;
     circle.x = COLS / 2;
+}
+
+// Get circle's current position (center):
+int get_circle_x() {
+    return circle.x;
+}
+
+int get_circle_y() {
+    return circle.y;
 }
 
 // Draw filled circle according to its equation
@@ -130,6 +140,7 @@ void init_console_ui() {
 
     init_pair(1, COLOR_BLACK, COLOR_GREEN);
     init_pair(2, COLOR_WHITE, COLOR_BLUE);
+    init_pair(3, COLOR_BLACK, COLOR_CYAN);
 
     // Initialize UI elements
     set_circle();
