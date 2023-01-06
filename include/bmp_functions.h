@@ -32,7 +32,7 @@ void draw_bmp(bmpfile_t *bmp, int x0, int y0) {
     for(int x = -radius; x <= radius; x++) {
         for(int y = -radius; y <= radius; y++) {
         // If distance is smaller, point is within the circle
-        if(sqrt(x*x + y*y) < radius) {
+        if(x*x + y*y < radius*radius) {
             /*
             * Color the pixel at the specified (x,y) position
             * with the given pixel values
@@ -69,7 +69,7 @@ void load_bmp(bmpfile_t *bmp, rgb_pixel_t *matrix) {
 }
 
 void find_circle_center(rgb_pixel_t* matrix, int* pos) {
-    int max_len = 0, count = 0; 
+    int max_len = 0, count = 1; 
     int circle_found = 0;
     // Find the center of the circle:
     for(int x = 0; x < WIDTH; x++) {
@@ -78,7 +78,7 @@ void find_circle_center(rgb_pixel_t* matrix, int* pos) {
             // Get pixel at x,y:
             rgb_pixel_t pixel = matrix[x + y*WIDTH];
             // First, to calculate the dimeter of the blue circle, store all vertical chords:
-            if (pixel.blue == 255 && pixel.green == 0 && pixel.red == 0) {
+            if (pixel.blue + pixel.green + pixel.red < 765) {
                 circle_found = 1;
                 // Check if previous pixel was white:
                 rgb_pixel_t prev_pixel  = matrix[x + (y-1)*WIDTH];
@@ -89,7 +89,10 @@ void find_circle_center(rgb_pixel_t* matrix, int* pos) {
                 len++;
             }
         }
-        if (len > max_len) max_len = len;
+        if (len > max_len) {
+            max_len = len;
+            count = 1;
+        }
         else if (circle_found && len == max_len) count++;
         else if (circle_found) break;
     }

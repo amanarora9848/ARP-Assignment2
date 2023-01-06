@@ -10,8 +10,9 @@
 #include <sys/stat.h>
 #include "./../include/bmp_functions.h"
 #include <time.h>
+#include <sys/types.h>
+#include <unistd.h>
 
-#define DT 25 // Time in ms (40Hz)
 // #define SHM_NAME "/bmp_memory"
 // #define SEM_NAME "/bmp_sem"
 
@@ -32,47 +33,34 @@ int write_log(int fd_log, char *msg, int lmsg)
 
 void handler_exit(int sig)
 {
-  finish = 1;
+    finish = 1;
 }
 
 int main(int argc, char const *argv[])
 {
-    // Send PID to process A:
-    pid_t pid_b = getpid();
-    char *b_fifo = "./tmp/pid";
-    if (mkfifo(b_fifo, 0666) < 0) {
-        perror("Error creating pid fifo (B)");
-    }
-    int fd_b = open(b_fifo, O_WRONLY);
-    if (fd_b < 0 && errno != EINTR)
-        perror("Error opening process A-B fifo (B)");
-    char buf[10];
-    sprintf(buf, "%d", pid_b);
-    if (write(fd_b, buf, 10) < 0) perror("Error writing to process A-B fifo (B)");
-    sleep(2);
-    close(fd_b);
-
     // Log file:
     int fd_log = creat("./logs/processB.txt", 0666);
+    if (fd_log < 0) {
+        perror("Error opening log file (B)");
+        sleep(5);
+        exit(1);
+    }
+        
     char log_msg[64];
-    int length; 
+    int length;
 
     // Signal handling to exit process:
     struct sigaction sa_exit;
     sigemptyset(&sa_exit.sa_mask);
     sa_exit.sa_handler = &handler_exit;
-    sa_exit.sa_flags = SA_RESTART;
+    // sa_exit.sa_flags = SA_RESTART;
+    sa_exit.sa_flags = 0;
     if (sigaction(SIGTERM, &sa_exit, NULL) < 0)
     {
         length = snprintf(log_msg, 64, "Cannot catch SIGTERM.\n");
         if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
             perror("Error writing to log (cmd)");
     }
-
-    const struct timespec delay_nano = {
-        .tv_sec = 0,
-        .tv_nsec = DT*1e6
-    }; // 25ms
 
     // Utility variable to avoid trigger resize event on launch
     int first_resize = TRUE;
@@ -84,11 +72,12 @@ int main(int argc, char const *argv[])
     // bmpfile_t *bmp;
     const size_t shm_size = WIDTH * HEIGHT * sizeof(rgb_pixel_t);
 
-    // Access shared memory
+    // Open shared memory
     char shm_name[] = "/bmp_memory";
-    int shm_fd = shm_open(shm_name, O_RDONLY, 0666);
-    if (shm_fd < 0 && errno != EINTR){
-        length = snprintf(log_msg, 64, "Error reading shared memory: %d.\n", errno);
+    int shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
+    if (shm_fd < 0 && errno != EINTR)
+    {
+        length = snprintf(log_msg, 64, "Error opening shared memory: %d.\n", errno);
         if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
             perror("Error writing to log (B)");
         exit(1);
@@ -97,7 +86,8 @@ int main(int argc, char const *argv[])
     // open semaphore
     char sem_name[] = "/bmp_sem";
     sem_t *sem_id = sem_open(sem_name, 1);
-    if (sem_id == SEM_FAILED) {
+    if (sem_id == SEM_FAILED)
+    {
         length = snprintf(log_msg, 64, "Error opening semaphore: %d.\n", errno);
         if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
             perror("Error writing to log (B)");
@@ -128,47 +118,65 @@ int main(int argc, char const *argv[])
         exit(1);
     }
 
+    int center_pos[2];
+    // Lock semaphore
+    if (sem_wait(sem_id) < 0 && errno != EINTR)
+    {
+        length = snprintf(log_msg, 64, "Error waiting semaphore: %d.\n", errno);
+        if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
+            perror("Error writing to log (B)");
+        finish = 1;
+    }
+
+    find_circle_center(ptr, center_pos);
+    length = snprintf(log_msg, 64, "Center of circle found at (%d, %d).\n", center_pos[0], center_pos[1]);
+    if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
+        perror("Error writing to log (B)");
+
+    // Draw circle center
+    mvaddch(center_pos[1] / SCALE, center_pos[0] / SCALE, '0');
 
     // Infinite loop
-    while (!finish) {
-        
+    while (!finish)
+    {
+
         // Get input in non-blocking mode
         int cmd = getch();
 
         // If user resizes screen, re-draw UI...
-        if(cmd == KEY_RESIZE) {
-            if(first_resize) {
+        if (cmd == KEY_RESIZE)
+        {
+            if (first_resize)
+            {
                 first_resize = FALSE;
             }
-            else {
+            else
+            {
                 reset_console_ui();
             }
         }
 
-        else {
+        else
+        {
             // Lock semaphore
-            if (sem_wait(sem_id) < 0) {
+            if (sem_wait(sem_id) < 0 && errno != EINTR)
+            {
                 length = snprintf(log_msg, 64, "Error waiting semaphore: %d.\n", errno);
                 if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
                     perror("Error writing to log (B)");
                 finish = 1;
             }
 
-            // // Get bitmap from shared memory - Might not need it.
-            // load_bmp(bmp, ptr);
-            int* center_pos;
-            // TODO: confirm the operation on scaling factor
+
             find_circle_center(ptr, center_pos);
-            length = snprintf(log_msg, 64, "Center of circle found at (%d, %d).", center_pos[0], center_pos[1]);
+            length = snprintf(log_msg, 64, "Center of circle found at (%d, %d).\n", center_pos[0], center_pos[1]);
             if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
                 perror("Error writing to log (B)");
-            
+
             // Draw circle center
-            mvaddch(center_pos[0] / SCALE, center_pos[1] / SCALE, '0');
+            mvaddch(center_pos[1] / SCALE, center_pos[0] / SCALE, '0');
 
             refresh();
-
-            nanosleep(&delay_nano, NULL);
         }
     }
 

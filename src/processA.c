@@ -9,6 +9,8 @@
 #include <sys/stat.h>
 #include "./../include/bmp_functions.h"
 #include <time.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #define DT 25 // Time in ms (40Hz)
 
@@ -29,30 +31,27 @@ int write_log(int fd_log, char *msg, int lmsg)
 
 int main(int argc, char *argv[])
 {
+    sleep(1);
+    FILE *cmd = popen("pgrep processB", "r");
+    char result[10];
+    fgets(result, sizeof(result), cmd);
     pid_t pid_b;
-    char *pid_fifo = "./tmp/pid";
-    if (mkfifo(pid_fifo, 0666) < 0) {
-        perror("Error creating pid fifo (A)");
-    }
-    
-    int fd_b = open(pid_fifo, O_RDONLY);
-    if (fd_b < 0 && errno != EINTR)
-        perror("Error opening pid fifo (A)");
-    char buf[10];
-    if (read(fd_b, buf, 10) < 0)
-        perror("Error reading from pid fifo (A)");
-    sscanf(buf, "%d", &pid_b);
-    close(fd_b);
+    sscanf(result, "%d", &pid_b);
 
     // Log file:
     int fd_log = creat("./logs/processA.txt", 0666);
+    if (fd_log < 0)
+        perror("Error opening log file (A)");
     char log_msg[64];
     int length;
 
+    length = snprintf(log_msg, 64, "PID process B: %d.\n", pid_b);
+    if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
+        perror("Error writing to log (A)");
+
     const struct timespec delay_nano = {
         .tv_sec = 0,
-        .tv_nsec = DT*1e6
-    }; // 25ms
+        .tv_nsec = DT * 1e6}; // 25ms
 
     // Utility variable to avoid trigger resize event on launch
     int first_resize = TRUE;
@@ -78,7 +77,7 @@ int main(int argc, char *argv[])
     circle_x = get_circle_x() * SCALE;
     circle_y = get_circle_y() * SCALE;
     draw_bmp(bmp, circle_x, circle_y);
-    length = snprintf(log_msg, 64, "Center of circle drawn at (%d, %d).", circle_x, circle_y);
+    length = snprintf(log_msg, 64, "Center of circle drawn at (%d, %d).\n", circle_x, circle_y);
     if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
         perror("Error writing to log (A)");
 
@@ -206,7 +205,8 @@ int main(int argc, char *argv[])
             bmp_destroy(bmp);
             // Create new bitmap:
             bmp = bmp_create(WIDTH, HEIGHT, 4);
-            if (bmp == NULL) {
+            if (bmp == NULL)
+            {
                 length = snprintf(log_msg, 64, "Error creating bitmap: %d.\n", errno);
                 if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
                     perror("Error writing to log (A)");
@@ -218,13 +218,13 @@ int main(int argc, char *argv[])
             draw_bmp(bmp, circle_x, circle_y);
 
             // Log the center
-            length = snprintf(log_msg, 64, "Center of circle drawn at (%d, %d).", circle_x, circle_y);
+            length = snprintf(log_msg, 64, "Center of circle drawn at (%d, %d).\n", circle_x, circle_y);
             if (write_log(fd_log, log_msg, length) < 0 && errno != EINTR)
                 perror("Error writing to log (A)");
 
             // Copy bitmap to shm:
             save_bmp(bmp, ptr);
-            
+
             // Tell the process B that writing is done:
             if (sem_post(sem_id) < 0)
             {
@@ -243,9 +243,9 @@ int main(int argc, char *argv[])
         perror("Error writing to log (A)");
     bmp_destroy(bmp);
     close(shm_fd);
-    shm_unlink(shm_name);
+    // shm_unlink(shm_name);
     sem_close(sem_id);
-    sem_unlink(sem_name);
+    // sem_unlink(sem_name);
     close(fd_log);
     endwin();
     return 0;
