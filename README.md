@@ -3,7 +3,7 @@ Implementation of a simulated vision system through shared memory.
 
 The two processes involved in the simulation of the vision system, namely **processA** and **processB**, are implemented as simple *ncurses windows*. The development of the inter-process communication pipeline, that is the shared memory, is left to you.
 
-As for the first assignment, you also find a **master** process already prepared for you, responsible of spawning the entire simulation.
+A **master** process responsible of spawning the entire simulation has been given.
 
 All credits to @SimoneMacci0 for development of the base repository for the assignment, at [SimoneMacci0/ARP-Assignment2](https://github.com/SimoneMacci0/ARP-Assignment2).
 
@@ -47,7 +47,6 @@ The two consoles:
 - Snapshot of the object after pressing the `P` button.
 
 ![Snapshot](images/snapshot.png)
-
 
 - The second konsole window of process B tracks and shows the position of the object.
 
